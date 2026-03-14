@@ -13,14 +13,18 @@ class JordanTourismApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'اكتشف الأردن',
-      theme: ThemeData(primarySwatch: Colors.red, useMaterial3: true),
+      title: 'اكتشف الأردن الحديث',
+      theme: ThemeData(
+        primarySwatch: Colors.red,
+        useMaterial3: true,
+        fontFamily: 'Roboto', // يمكن استبداله بخط عربي احترافي
+      ),
       home: const MainScreen(),
     );
   }
 }
 
-// ================= الصفحة الرئيسية =================
+// ================= الشاشة الرئيسية مع نظام التنقل المطور =================
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -29,26 +33,84 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _rating = 0;
+  int _currentIndex =
+      0; // تحسين بناءً على ملاحظة ياسين: إضافة نظام التنقل الفعلي
+
+  // دالة لتبديل الصفحات بناءً على شريط التنقل السفلي
+  Widget _getBody() {
+    switch (_currentIndex) {
+      case 0:
+        return const HomeTab(); // الصفحة الرئيسية (فيديو + ملخص)
+      case 1:
+        return const LocationsTab(); // صفحة المعالم السياحية
+      case 2:
+        return const QuizScreen(); // شاشة الاختبار (ملاحظة أحمد: وصول سريع)
+      default:
+        return const HomeTab();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        // تحسين بناءً على ملاحظة سلطان: استخدام تدرج لوني بدلاً من الأحمر القوي
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.redAccent, Colors.orangeAccent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        title: const Text(
+          'اكتشف الأردن',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        elevation: 0,
+      ),
+      body: _getBody(),
+
+      // تحسين بناءً على ملاحظة ياسين وأحمد: شريط تنقل سفلي لسهولة الوصول
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        selectedItemColor: Colors.redAccent,
+        unselectedItemColor: Colors.grey,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'الرئيسية'),
+          BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'المعالم'),
+          BottomNavigationBarItem(icon: Icon(Icons.quiz), label: 'الاختبار'),
+        ],
+      ),
+    );
+  }
+}
+
+// ================= قسم الصفحة الرئيسية (Home Tab) =================
+class HomeTab extends StatefulWidget {
+  const HomeTab({super.key});
+
+  @override
+  State<HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<HomeTab> {
   late VideoPlayerController _controller;
+  int _userRating = 0;
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
-    // تأكد من مطابقة هذا المسار لملف pubspec.yaml
     _controller = VideoPlayerController.asset("assets/videos/jordan.mp4")
-      ..initialize()
-          .then((_) {
-            setState(() {});
-          })
-          .catchError((error) {
-            print("خطأ في تشغيل الفيديو: $error");
-          });
-  }
-
-  void _playClappingSound() async {
-    await _audioPlayer.play(AssetSource('sounds/clapp.mp3'));
+      ..initialize().then((_) => setState(() {}));
   }
 
   @override
@@ -60,199 +122,87 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'اكتشف الأردن',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.redAccent,
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // ===== قسم الفيديو =====
-            Container(
-              color: Colors.black,
-              width: double.infinity,
-              child: Column(
-                children: [
-                  _controller.value.isInitialized
-                      ? AspectRatio(
-                          aspectRatio: _controller.value.aspectRatio,
-                          child: VideoPlayer(_controller),
-                        )
-                      : const SizedBox(
-                          height: 200,
-                          child: Center(
-                            child: CircularProgressIndicator(color: Colors.red),
-                          ),
-                        ),
-                  VideoProgressIndicator(_controller, allowScrubbing: true),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // عرض الفيديو التعريفي
+          Container(
+            height: 250,
+            width: double.infinity,
+            color: Colors.black,
+            child: _controller.value.isInitialized
+                ? Stack(
+                    alignment: Alignment.center,
                     children: [
+                      AspectRatio(
+                        aspectRatio: _controller.value.aspectRatio,
+                        child: VideoPlayer(_controller),
+                      ),
                       IconButton(
                         icon: Icon(
                           _controller.value.isPlaying
                               ? Icons.pause_circle
                               : Icons.play_circle,
-                          color: Colors.white,
-                          size: 40,
+                          color: Colors.white70,
+                          size: 60,
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _controller.value.isPlaying
-                                ? _controller.pause()
-                                : _controller.play();
-                          });
-                        },
+                        onPressed: () => setState(() {
+                          _controller.value.isPlaying
+                              ? _controller.pause()
+                              : _controller.play();
+                        }),
                       ),
                     ],
+                  )
+                : const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  ),
+          ),
+
+          const Padding(
+            padding: EdgeInsets.all(20),
+            child: Text(
+              'مرحباً بك في أرض الحضارات',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+          ),
+
+          // تحسين بناءً على ملاحظة خالد: نظام تقييم بالنجوم عصري بدلاً من الأزرار القديمة
+          Card(
+            margin: const EdgeInsets.all(15),
+            child: Padding(
+              padding: const EdgeInsets.all(15),
+              child: Column(
+                children: [
+                  const Text(
+                    'ما رأيك في تجربة التطبيق؟',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) {
+                      return IconButton(
+                        icon: Icon(
+                          index < _userRating ? Icons.star : Icons.star_border,
+                          color: Colors.amber,
+                          size: 35,
+                        ),
+                        onPressed: () {
+                          setState(() => _userRating = index + 1);
+                          if (_userRating >= 4) {
+                            _audioPlayer.play(AssetSource('sounds/clapp.mp3'));
+                          }
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('شكراً لمساهمتك في تحسين التطبيق!'),
+                            ),
+                          );
+                        },
+                      );
+                    }),
                   ),
                 ],
               ),
-            ),
-
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-              child: Text(
-                'أهم المواقع السياحية والأثرية',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ),
-
-            // ===== بطاقات المواقع مع الصور =====
-            _buildInfoCard(
-              'مدينة البتراء الوردية',
-              'إحدى عجائب الدنيا السبع، مدينة كاملة منحوتة في الصخر الوردي من قبل الأنباط.',
-              'assets/images/petra.webp',
-            ),
-
-            _buildInfoCard(
-              'قلعة عجلون',
-              'قلعة إسلامية تاريخية بناها القائد عز الدين أسامة، أحد قادة صلاح الدين الأيوبي.',
-              'assets/images/ajloun.jpg',
-            ),
-
-            _buildInfoCard(
-              'مدينة جرش الأثرية',
-              'تعتبر من أفضل المدن الرومانية المحفوظة في العالم، وتشتهر بمهرجانها السنوي.',
-              'assets/images/jarash.jpg',
-            ),
-
-            const SizedBox(height: 20),
-
-            // ===== زر الاختبار =====
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber[700],
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const QuizScreen()),
-                  ),
-                  icon: const Icon(Icons.quiz),
-                  label: const Text(
-                    'ابدأ اختبار المعلومات',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            ),
-
-            const Divider(height: 50, thickness: 1),
-
-            // ===== قسم التقييم =====
-            const Text('ما هو تقييمك للتطبيق؟', style: TextStyle(fontSize: 16)),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(5, (index) {
-                return IconButton(
-                  icon: Icon(index < _rating ? Icons.star : Icons.star_border, color: Colors.amber),
-                  onPressed: () {
-                    setState(() => _rating = index + 1);
-                    // إذا كان التقييم مرتفع (4 أو 5)، شغل صوت التصفيق 
-                    if (_rating >= 4) {
-                      _playClappingSound();
-                    }
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('شكراً لتقييمك!')));
-                  },
-                );
-              }),
-            ),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // دالة بناء بطاقة الموقع مع الصورة
-  Widget _buildInfoCard(String title, String description, String imagePath) {
-    return Card(
-      elevation: 5,
-      margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Image.asset(
-            imagePath,
-            height: 200,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                height: 200,
-                color: Colors.grey[300],
-                child: const Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.image_not_supported,
-                      size: 50,
-                      color: Colors.grey,
-                    ),
-                    Text('الصورة غير موجودة'),
-                  ],
-                ),
-              );
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.all(15),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  description,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                ),
-              ],
             ),
           ),
         ],
@@ -261,7 +211,72 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// ================= صفحة الاختبار =================
+// ================= قسم المعالم السياحية (Locations Tab) =================
+class LocationsTab extends StatelessWidget {
+  const LocationsTab({super.key});
+
+  Widget _buildLocationCard(String title, String desc, String img) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      clipBehavior: Clip.antiAlias,
+      elevation: 4,
+      child: Column(
+        children: [
+          Image.asset(
+            img,
+            height: 180,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
+          ListTile(
+            title: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(desc),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      children: [
+        _buildLocationCard(
+          'مدينة البتراء',
+          'واحدة من عجائب الدنيا السبع وتسمى المدينة الوردية.',
+          'assets/images/petra.webp',
+        ),
+        _buildLocationCard(
+          'قلعة عجلون',
+          'قلعة إسلامية بناها القائد عز الدين أسامة.',
+          'assets/images/ajloun.jpg',
+        ),
+        _buildLocationCard(
+          'مدينة جرش',
+          'تعد من أكبر المواقع الرومانية المحفوظة في العالم.',
+          'assets/images/jarash.jpg',
+        ),
+
+        _buildLocationCard(
+          'أم قيس',
+          'عُرفت أم قيس قديمًا باسم جدارا، وهي إحدى المدن اليونانية- الرومانية العشر (حلف المدن العشرة). وفي ‏الأزمنة القديمة، كانت جدارا تقع في موقع استراتيجي ويمر بها عدد من الطرق التجارية التي كانت تربط سوريا وفلسطين.',
+          'assets/images/umqais.jfif',
+        ),
+        _buildLocationCard(
+          'محمية ضانا',
+          'تأسست محمية ضانا للمحيط الحيوي عام 1989، وتقع في محافظة الطفيلة جنوب الأردن، وتمتد على مساحة ‏تقارب 300 كم². تمتد المحمية من سفوح جبال القادسية التي ترتفع أكثر من 1500 متر عن سطح البحر إلى سهول ووديان وادي عربة، ‏وتتميز بتضاريسها المتنوعة من الجبال الشاهقة إلى الأودية العميقة والصحاري.',
+          'assets/images/dana.jpg',
+        ),
+      ],
+    );
+  }
+}
+
+// ================= شاشة الاختبار المحدثة (Quiz Screen) =================
 class QuizScreen extends StatefulWidget {
   const QuizScreen({super.key});
 
@@ -270,12 +285,10 @@ class QuizScreen extends StatefulWidget {
 }
 
 class _QuizScreenState extends State<QuizScreen> {
-
   int _currentIdx = 0;
   int _score = 0;
   int? _selectedAnswer;
   bool _answered = false;
-
   final AudioPlayer _player = AudioPlayer();
 
   final List<Map<String, dynamic>> _questions = [
@@ -285,31 +298,19 @@ class _QuizScreenState extends State<QuizScreen> {
       'ans': 0,
     },
     {
-      'q': 'أين يقع البحر الميت؟',
-      'opts': ['الشمال', 'الغرب', 'الشرق'],
-      'ans': 1,
-    },
-    {
-      'q': 'ما هو لون صخور البتراء؟',
-      'opts': ['أبيض', 'أسود', 'وردي'],
+      'q': 'ما هو لون صخور البتراء الشهير؟',
+      'opts': ['أبيض', 'أزرق', 'وردي'],
       'ans': 2,
     },
     {
-      'q': 'عاصمة الأردن هي:',
-      'opts': ['السلط', 'عمان', 'العقبة'],
+      'q': 'من بنى قلعة عجلون؟',
+      'opts': ['الرومان', 'عز الدين أسامة', 'الأنباط'],
       'ans': 1,
-    },
-    {
-      'q': 'تشتهر جرش بآثارها:',
-      'opts': ['الرومانية', 'الفرعونية', 'الفارسية'],
-      'ans': 0,
     },
   ];
 
   void _checkAnswer(int index) async {
-
     if (_answered) return;
-
     setState(() {
       _selectedAnswer = index;
       _answered = true;
@@ -323,120 +324,85 @@ class _QuizScreenState extends State<QuizScreen> {
     }
 
     await Future.delayed(const Duration(seconds: 1));
-
     setState(() {
-      _currentIdx++;
-      _selectedAnswer = null;
-      _answered = false;
+      if (_currentIdx < _questions.length - 1) {
+        _currentIdx++;
+        _selectedAnswer = null;
+        _answered = false;
+      } else {
+        _showFinalResult();
+      }
     });
   }
 
-  Color _getColor(int i) {
-
-    if (!_answered) return Colors.blue;
-
-    if (i == _questions[_currentIdx]['ans']) {
-      return Colors.green;
-    } else if (i == _selectedAnswer) {
-      return Colors.red;
-    }
-
-    return Colors.grey;
+  // تحسين بناءً على ملاحظة يوسف: ألوان واضحة للإجابات (أخضر للصح، أحمر للخطأ)
+  Color _getBtnColor(int i) {
+    if (!_answered) return Colors.blueGrey.shade100;
+    if (i == _questions[_currentIdx]['ans']) return Colors.greenAccent.shade400;
+    if (i == _selectedAnswer) return Colors.redAccent;
+    return Colors.blueGrey.shade100;
   }
 
-  @override
-  void dispose() {
-    _player.dispose();
-    super.dispose();
+  void _showFinalResult() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('🎉 انتهى الاختبار'),
+        content: Text('لقد حصلت على $_score من أصل ${_questions.length}'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() {
+                _currentIdx = 0;
+                _score = 0;
+                _answered = false;
+              });
+            },
+            child: const Text('إعادة المحاولة'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-
-    double progress = (_currentIdx) / _questions.length;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('اختبار المعلومات'),
-        centerTitle: true,
-      ),
-
-      body: _currentIdx < _questions.length
-          ? Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-
-                  LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 10,
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          LinearProgressIndicator(value: (_currentIdx + 1) / _questions.length),
+          const SizedBox(height: 40),
+          Text(
+            _questions[_currentIdx]['q'],
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 30),
+          ...List.generate(
+            3,
+            (i) => Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 15),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _getBtnColor(i),
+                  padding: const EdgeInsets.all(15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-
-                  const SizedBox(height: 30),
-
-                  Text(
-                    _questions[_currentIdx]['q'],
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  ...List.generate(
-                    3,
-                    (i) => Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 15),
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _getColor(i),
-                          padding: const EdgeInsets.all(15),
-                        ),
-                        onPressed: () => _checkAnswer(i),
-                        child: Text(
-                          _questions[_currentIdx]['opts'][i],
-                          style: const TextStyle(fontSize: 18),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )
-
-          : Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    '🎉 انتهى الاختبار',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'نتيجتك: $_score من ${_questions.length}',
-                    style: const TextStyle(fontSize: 22),
-                  ),
-                  const SizedBox(height: 30),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _currentIdx = 0;
-                        _score = 0;
-                      });
-                    },
-                    child: const Text('إعادة الاختبار'),
-                  )
-                ],
+                ),
+                onPressed: () => _checkAnswer(i),
+                child: Text(
+                  _questions[_currentIdx]['opts'][i],
+                  style: const TextStyle(fontSize: 18, color: Colors.black87),
+                ),
               ),
             ),
+          ),
+        ],
+      ),
     );
   }
 }
